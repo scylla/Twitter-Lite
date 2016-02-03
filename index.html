@@ -1,0 +1,329 @@
+<!doctype html>  
+<html lang="en">  
+    <head>
+    <title> Twitter Lite </title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/bootstrapl/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/bootstrapl/css/app.css" rel="stylesheet">
+    </head>
+    <body>
+
+      <div id="main" class="container">
+        <div class="header clearfix">
+        <h3 class="text-muted">Twitter Lite</h3>
+      </div>
+
+        <div id="category">
+            <h2> 
+             <span class="label label-default">choose your category</span>
+            </h2>
+            <hr>
+            <button id="publish" class="btn btn-space btn-primary"> login as publisher </button>
+            </br><hr>
+            <button id="subscribe" class="btn btn-space btn-primary"> login as subscriber </button>
+            </br><hr>
+            <button id="register" class="btn btn-space btn-primary"> register for tweeter lite </button>
+
+        </div>
+
+
+        <div id="register_block" style="display:none"> 
+            <div class="input-group">
+                <span class="input-group-addon" id="basic-addon1">name</span>
+                <input id="name_r" type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1">
+            </div> <hr>
+             <div class="input-group">
+                <span class="input-group-addon" id="basic-addon1">password</span>
+                <input id="pass_r" type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1">
+            </div> <hr>
+             <div class="input-group">
+                <span class="input-group-addon" id="basic-addon1">description</span>
+                <input id="desc_r" type="text" class="form-control" placeholder="Describe youself / Topic of interest for publisher" aria-describedby="basic-addon1">
+            </div> <hr>
+
+            <div class="input-group">
+                 <span class="input-group-addon">
+                   <span>Publisher &nbsp;</span> <input type="radio" name="usertype" aria-label="publisher">
+                 </span> 
+                 <span class="input-group-addon">
+                   <span>Subscriber &nbsp;</span> <input type="radio" name="usertype" aria-label="subscriber">
+                 </span>
+            </div>
+            <hr>
+            <button class="btn btn-primary"> register </button></br>
+            <span id="failed" class="label label-default"></span>
+        </div>
+
+        <div id="login" style="display:none"> 
+            <div class="input-group">
+                <span class="input-group-addon" id="basic-addon1">name</span>
+                <input id="name_l" type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1">
+            </div>
+             <div class="input-group">
+                <span class="input-group-addon" id="basic-addon1">password</span>
+                <input id="pass_l" type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1">
+            </div><hr>
+            <button class="btn btn-space btn-primary"> login </button></br>
+            <h3><span id="failed" class="label label-warning"></span><h3>
+        </div>
+
+         <div id="publisher_zone" style="display:none"> 
+            <h2><span class="label label-default"> post a new message <span> <span id="u_name" class="label label-default"> guest <span> </h2>
+            <textarea class="form-control" rows="5" id="comment"></textarea>
+            <hr>
+            <button class="btn btn-primary"> post </button><hr>
+            <h3><span id="status" class="label label-default" style="display:none"> </span><h3>
+        </div>
+
+         <div id="subscriber_zone" style="display:none"> 
+             <h2><span class="label label-default"> your messages are here <span> <span id="u_name" class="label label-default"> guest <span></h2>
+             <div id="content">
+              <div class="row">
+                <div class="col-sm-7">
+                    <div id="message_section" class="list-group">
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <ul id="publishers_list" class="list-group">
+                        <li class="list-group-item">Available Channels</li>
+                    </ul>
+                </div>
+              </div>
+                 
+             </div>
+        </div>
+      </div>  
+
+        <script src="/jquery/dist/jquery.min.js"></script>
+        <script src="/bootstrapl/js/bootstrap.min.js"></script>
+        <script src="/bootstrapl/js/js-date-format.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/bootstrapl/js/notify.js"></script>
+        <script>
+      $(function(){
+
+            // setting defaults
+            var setType = "publisher";
+            var userName = "guest";
+            var socket = io.connect();
+                
+            socket.on('connect', function(data) {
+                socket.emit('join', 'Hello World from client');
+                if(setType == "subscriber" && userName != "guest"){
+                    socket.emit('update_socket', {"name": userName});
+                    socket.emit('list_publishers', {"user": userName});
+                    socket.emit('get_old_messages', {"user" : userName});
+                }
+            });
+
+            socket.on('disconnect',function(){
+                $.notify("you are now offline!!!", "error"); 
+            });
+
+            socket.on('connected_again',function(data){
+                $.notify("Now online again!!!", "info"); 
+            });
+
+            // login was successful
+            socket.on('login_success', function(data) {
+
+                 $("#login #failed").text("");
+                     $('#login').hide();
+                     userName = data.name;
+                     if(setType == "subscriber"){
+                         $('#subscriber_zone #u_name').text(userName);
+                         socket.emit('list_publishers', {"user": userName});
+                         socket.emit('get_old_messages', {"user" : userName});
+                     } else  {
+                        $('#publisher_zone #u_name').text(userName);
+                     }
+                     $('#' + setType + '_zone').show();
+            });
+
+            // login failed 
+            socket.on('login_failure', function(data) {
+                $("#login #failed").text(data.message);
+            });
+
+            // userv registered successfully
+            socket.on('register_success', function(data) {
+                setType = $('input[name=usertype]:checked').attr('aria-label');
+                $("#register_block #failed").text("successfully registered");
+                $("#register_block").hide();
+                userName = data.name;
+                $('#' + setType + '_zone').show();
+                if(setType == "subscriber") {
+                    $('#subscriber_zone #u_name').text(userName);
+                    socket.emit('list_publishers', {"user": userName});
+                }
+                else 
+                    $('#publisher_zone #u_name').text(userName);
+
+            }); 
+
+            // register request failed
+            socket.on('register_failure', function(data) {
+                $("#register_block #failed").text("registration failed try again");
+            });   
+
+            // fetched old messages successfully 
+            socket.on('show_old_messages', function(data){
+
+                if(setType == "subscriber" && data.user == userName){
+                    console.log(JSON.stringify(data));
+                    var lsSize = $("#subscriber_zone #message_section a").length;
+                    var msg = data.msgq;
+                    if(msg.length == lsSize) {
+                        return;
+                    } else {
+                        if(lsSize > 0) $.notify("New messages received!!!", "success");
+                        msg.splice(0, lsSize);
+                        $.each(msg, function(key,value) {
+                        console.log(key);
+                        console.log(value);
+                        $("#subscriber_zone #message_section").prepend("<a href='#' class='list-group-item active'><h4 class='list-group-item-heading'>" + value.publisher + " @ " + value.time + "</h4><p class='list-group-item-text'>" + value.text + "</p></a>");
+                        });
+                    }
+               }
+            });
+
+            // fetch list of publishers available
+            socket.on('fetch_list_success', function(data) {
+                console.log(JSON.stringify(data))
+                var obj = data.allchannels;
+                if(userName == data.user) {
+                    
+                    var lsSize = $("#publishers_list li").length - 1;
+
+                    if(lsSize > 0) {
+
+                        if(lsSize < obj.length)
+                            $.notify("New Subscriptions Available -- relogin to view", "info");
+                        return;
+                    }
+
+                    $.each(obj, function(key,value) {
+
+                    $("#publishers_list li:last").after("<li id='pub_" + value.description + "'class='list-group-item'>" + value.description + "</li>");
+                    $('#pub_'+value.description).click(function(event) {
+                          if(!$(this).hasClass('list-group-item-success'))
+                            socket.emit("update_pub_sub", {
+                                "topics" : $(this).text(),
+                                "subs" : userName
+                    });
+                    });
+                    }); 
+
+                    obj = data.currentsubs;
+                    console.log(JSON.stringify(obj));
+                    $.each(obj, function(key, value) {
+                    $("#publishers_list #pub_" + value.topics).addClass('list-group-item-success');
+                    }); 
+                }
+            }); 
+
+            // subscribed successfully
+            socket.on('pub_sub_update_success', function(data){
+                $("#publishers_list li#pub_" + data.name).addClass('list-group-item-success');
+                $.notify("Subscription Successful", "success");
+            }); 
+
+            // new message received
+            socket.on('new_message_available', function(data){
+               if(setType == "subscriber" && data.user == userName){
+                console.log(JSON.stringify(data));
+                var msg = data.message;
+                $("#subscriber_zone #message_section").prepend("<a href='#' class='list-group-item active'><h4 class='list-group-item-heading'>" + msg.publisher + " @ " + msg.time + "</h4><p class='list-group-item-text'>" + msg.text + "</p></a> ");
+                $.notify("New Message Received", "success");
+               }
+            });
+
+            // message successfully delivered
+            socket.on('message_post_success', function(data){
+                if(setType == "publisher" && data.status == "OK") {
+                    $.notify("Message Posted Successfully", "success");
+                    $('#comment').val("");
+                }
+            });
+
+            // message successfully delivered
+            socket.on('message_post_failure', function(data){
+                if(setType == "publisher") {
+                    $.notify(data.status, "error");
+                }
+            });
+
+            // display new publisher 
+            socket.on('new_topic_available', function(data){
+                if(setType == "subscriber") {
+                     $("#publishers_list li:last").after("<li id='pub_" + data.name + "'class='list-group-item'>" + data.name + "</li>");
+                     $('#pub_' + data.name).click(function(event) {
+                          if(!$(this).hasClass('list-group-item-success'))
+                            socket.emit("update_pub_sub", {
+                                "topics" : $(this).text(),
+                                "subs" : userName
+                            });
+                    });
+
+                    $.notify("New Topic Available", "success");
+                }
+            });  
+
+
+            // user actions handler
+            $('#publish').on("click", function(event){
+                setType = "publisher";
+                $('#category').hide();
+                $('#login').show();
+            });
+
+            $('#category #register').on("click", function(event){
+                $('#category').hide();
+                $('#register_block').show();
+            });
+
+
+            $('#subscribe').on("click", function(event){
+                setType = "subscriber";
+                $('#category').hide();
+                $('#login').show();
+            });
+
+            $("#login button").click(function () {
+                $("#login #failed").text("");
+                 socket.emit('login', {
+                    "name" : $("#name_l").val(),
+                    "password" : $("#pass_l").val(),
+                    "type" : setType
+                 });
+            });
+
+
+            $("#register_block button").click(function () {
+                 socket.emit('register', {
+                    "name" : $("#name_r").val(),
+                    "password" : $("#pass_r").val(),
+                    "type" : $('input[name=usertype]:checked').attr('aria-label'),
+                    "description" : $("#desc_r").val()
+                 });
+            });
+
+            $("#publisher_zone button").click(function () {
+                 $("#publisher_zone #status").hide();
+                 socket.emit('publish_post', {
+                    "publisher" : userName,
+                    "message" : {"text" : $('#comment').val(),
+                                 "time" : new Date().format("DDDD, MMMM DS h:mm:ss.fff TT"),
+                                 "read" : false,
+                                 "id" : Date.now(),
+                                 "publisher" : userName
+                                }
+                 });
+            });
+
+    });
+    </script>           
+    </body>
+</html>  

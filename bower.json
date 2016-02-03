@@ -1,0 +1,25 @@
+{
+  "name": "litetweet",
+  "description": "lite twitter like pub-sub app using websockets",
+  "main": "index.js",
+  "authors": [
+    "amit nagarkoti"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "tweet",
+    "share"
+  ],
+  "moduleType": [],
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^2.2.0"
+  }
+}
